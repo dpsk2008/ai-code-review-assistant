@@ -49,6 +49,24 @@ class AnalyzeSourceTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
+    def test_flags_mutable_list_default_on_changed_line(self):
+        source = (
+            "def collect(item, items=[]):\n"
+            "    items.append(item)\n"
+            "    return items\n"
+        )
+
+        findings = analyze_source(
+            "example.py",
+            source,
+            changed_line_numbers={1},
+        )
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["PY002"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
