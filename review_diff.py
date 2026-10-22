@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 
 from review_assistant.diff_parser import parse_added_lines
+from review_assistant.rules import analyze_source
 
 
 def main() -> int:
@@ -44,8 +45,21 @@ def main() -> int:
         return 0
 
     print(f"Added lines ({len(added_lines)}):")
+    changed_line_numbers = {line.line_number for line in added_lines}
+
     for line in added_lines:
         print(f"{line.file_path}:{line.line_number}: {line.content}")
+
+    source = args.after.read_text(encoding="utf-8")
+    findings = analyze_source(str(args.after), source, changed_line_numbers)
+
+    for finding in findings:
+        print(
+            f"[{finding.severity.upper()}] "
+            f"{finding.file_path}:{finding.line_number} "
+            f"{finding.rule_id}: {finding.message}"
+        )
+        print(f"  Recommendation: {finding.recommendation}")
 
     return 0
 
