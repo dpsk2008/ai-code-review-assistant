@@ -13,7 +13,7 @@ class Finding:
 
 
 def _is_mutable_default(node: ast.expr) -> bool:
-    """Return whether an AST expression creates a mutable default value."""
+    """Return whether an expression creates a mutable default value."""
     mutable_literals = (
         ast.List,
         ast.Dict,
@@ -26,7 +26,6 @@ def _is_mutable_default(node: ast.expr) -> bool:
     if isinstance(node, mutable_literals):
         return True
 
-    # Also catch defaults such as list(), dict(), and set().
     return (
         isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
@@ -50,9 +49,8 @@ def analyze_source(
                 and type(node.slice.value) is int
                 and node.slice.value == 0
             )
-            is_changed_line = node.lineno in changed_line_numbers
 
-            if is_zero_index and is_changed_line:
+            if is_zero_index and node.lineno in changed_line_numbers:
                 findings.append(
                     Finding(
                         rule_id="PY001",
@@ -73,7 +71,11 @@ def analyze_source(
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             defaults = [
                 *node.args.defaults,
-                *(default for default in node.args.kw_defaults if default is not None),
+                *(
+                    default
+                    for default in node.args.kw_defaults
+                    if default is not None
+                ),
             ]
 
             for default in defaults:
@@ -97,6 +99,27 @@ def analyze_source(
                             ),
                         )
                     )
+
+        if isinstance(node, ast.ExceptHandler):
+            is_bare_except = node.type is None
+
+            if is_bare_except and node.lineno in changed_line_numbers:
+                findings.append(
+                    Finding(
+                        rule_id="PY003",
+                        file_path=file_path,
+                        line_number=node.lineno,
+                        severity="warning",
+                        message=(
+                            "A bare except catches nearly every exception, "
+                            "which can hide unexpected errors."
+                        ),
+                        recommendation=(
+                            "Catch the specific exception types the code "
+                            "expects to handle."
+                        ),
+                    )
+                )
 
     return sorted(
         findings,

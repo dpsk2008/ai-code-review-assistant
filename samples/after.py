@@ -7,3 +7,9 @@ def get_user(users, user_id):
 def append_item(item, items=[]):
     items.append(item)
     return items
+
+def load_data():
+    try:
+        return read_data()
+    except:
+        return None
