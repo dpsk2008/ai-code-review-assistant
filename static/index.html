@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Review Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js" defer></script>
+    <script src="/static/script.js" defer></script>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-content">
+            <a href="/" class="brand">Code Review Assistant</a>
+            <span class="header-label">Python Code Analysis</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="intro">
+            <h1>Review your code with confidence.</h1>
+            <p>Find potential bugs and get clear recommendations to improve your Python code.</p>
+        </section>
+
+        <section class="workspace" aria-labelledby="editor-heading">
+            <div class="section-header">
+                <div>
+                    <h2 id="editor-heading">Code Editor</h2>
+                    <p>Paste your Python code or upload a Python file.</p>
+                </div>
+                <span class="language-label">Python</span>
+            </div>
+
+            <div class="editor-toolbar">
+                <div class="file-actions">
+                    <input
+                        type="file"
+                        id="file-input"
+                        accept=".py"
+                        hidden
+                    >
+
+                    <button id="upload-button" class="secondary-button" type="button">
+                        Upload File
+                    </button>
+
+                    <button id="clear-button" class="secondary-button" type="button">
+                        Clear Editor
+                    </button>
+                </div>
+
+                <span id="file-name">Untitled.py</span>
+            </div>
+
+            <p id="file-message" role="status"></p>
+
+            <div class="code-editor">
+                <div id="line-numbers" aria-hidden="true">1</div>
+
+                <div class="editor-content">
+                    <pre id="highlight-layer" aria-hidden="true"><code id="highlighted-code" class="language-python"></code></pre>
+
+                    <textarea
+                        id="code-input"
+                        spellcheck="false"
+                        autocapitalize="off"
+                        autocomplete="off"
+                        autocorrect="off"
+                        aria-label="Python code editor"
+                        placeholder="# Paste your Python code here"
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="editor-actions">
+                <button id="review-button" type="button">
+                    Review Code
+                </button>
+            </div>
+        </section>
+
+        <section class="results" aria-labelledby="results-heading">
+            <div class="section-header">
+                <h2 id="results-heading">Review Results</h2>
+                <span id="issue-count"></span>
+            </div>
+
+            <p id="status-message" role="status">
+                Your review results will appear here.
+            </p>
+
+            <div id="findings-list"></div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Code Review Assistant · Python Code Analysis</p>
+        </div>
+    </footer>
+</body>
+</html>
