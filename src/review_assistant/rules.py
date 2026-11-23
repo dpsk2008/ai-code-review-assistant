@@ -1,3 +1,4 @@
+
 import ast
 from dataclasses import dataclass
 
@@ -13,7 +14,6 @@ class Finding:
 
 
 def _is_mutable_default(node: ast.expr) -> bool:
-    """Return whether an expression creates a mutable default value."""
     mutable_literals = (
         ast.List,
         ast.Dict,
@@ -38,37 +38,38 @@ def analyze_source(
     source: str,
     changed_line_numbers: set[int],
 ) -> list[Finding]:
-    """Find supported issues on changed lines in Python source."""
     tree = ast.parse(source, filename=file_path)
     findings: list[Finding] = []
 
+    def add_finding(rule_id, line, message, recommendation):
+        if line in changed_line_numbers:
+            findings.append(
+                Finding(
+                    rule_id=rule_id,
+                    file_path=file_path,
+                    line_number=line,
+                    severity="warning",
+                    message=message,
+                    recommendation=recommendation,
+                )
+            )
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Subscript):
-            is_zero_index = (
+            if (
                 isinstance(node.slice, ast.Constant)
                 and type(node.slice.value) is int
                 and node.slice.value == 0
-            )
-
-            if is_zero_index and node.lineno in changed_line_numbers:
-                findings.append(
-                    Finding(
-                        rule_id="PY001",
-                        file_path=file_path,
-                        line_number=node.lineno,
-                        severity="warning",
-                        message=(
-                            "Indexing at 0 can raise IndexError if the "
-                            "sequence is empty."
-                        ),
-                        recommendation=(
-                            "Check that the sequence is non-empty before "
-                            "indexing, or use a safe lookup."
-                        ),
-                    )
+            ):
+                add_finding(
+                    "PY001",
+                    node.lineno,
+                    "Indexing at 0 can raise IndexError if the sequence is empty.",
+                    "Check that the sequence is non-empty before indexing, "
+                    "or use a safe lookup.",
                 )
 
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             defaults = [
                 *node.args.defaults,
                 *(
@@ -79,47 +80,104 @@ def analyze_source(
             ]
 
             for default in defaults:
-                if (
-                    _is_mutable_default(default)
-                    and default.lineno in changed_line_numbers
-                ):
-                    findings.append(
-                        Finding(
-                            rule_id="PY002",
-                            file_path=file_path,
-                            line_number=default.lineno,
-                            severity="warning",
-                            message=(
-                                "Mutable default arguments are shared across "
-                                "function calls, which can cause state to leak."
-                            ),
-                            recommendation=(
-                                "Use None as the default, then create a new "
-                                "list, dictionary, or set inside the function."
-                            ),
-                        )
+                if _is_mutable_default(default):
+                    add_finding(
+                        "PY002",
+                        default.lineno,
+                        "Mutable default arguments are shared across "
+                        "function calls, which can cause state to leak.",
+                        "Use None as the default, then create a new "
+                        "list, dictionary, or set inside the function.",
                     )
 
-        if isinstance(node, ast.ExceptHandler):
-            is_bare_except = node.type is None
-
-            if is_bare_except and node.lineno in changed_line_numbers:
-                findings.append(
-                    Finding(
-                        rule_id="PY003",
-                        file_path=file_path,
-                        line_number=node.lineno,
-                        severity="warning",
-                        message=(
-                            "A bare except catches nearly every exception, "
-                            "which can hide unexpected errors."
-                        ),
-                        recommendation=(
-                            "Catch the specific exception types the code "
-                            "expects to handle."
-                        ),
-                    )
+        elif isinstance(node, ast.ExceptHandler):
+            if node.type is None:
+                add_finding(
+                    "PY003",
+                    node.lineno,
+                    "A bare except catches nearly every exception, "
+                    "which can hide unexpected errors.",
+                    "Catch the specific exception types the code "
+                    "expects to handle.",
                 )
+
+        elif isinstance(node, ast.Compare):
+            operands = [node.left, *node.comparators]
+
+            for index, operator in enumerate(node.ops):
+                if not isinstance(operator, (ast.Eq, ast.NotEq)):
+                    continue
+
+                left = operands[index]
+                right = operands[index + 1]
+
+                if any(
+                    isinstance(value, ast.Constant)
+                    and value.value is None
+                    for value in (left, right)
+                ):
+                    add_finding(
+                        "PY004",
+                        node.lineno,
+                        "Equality comparisons with None may produce "
+                        "unexpected results.",
+                        "Use 'is None' or 'is not None' instead.",
+                    )
+
+                elif any(
+                    isinstance(value, ast.Constant)
+                    and type(value.value) is bool
+                    for value in (left, right)
+                ):
+                    add_finding(
+                        "PY007",
+                        node.lineno,
+                        "Explicit equality comparisons with boolean "
+                        "values may be unnecessary.",
+                        "Consider a direct boolean condition when "
+                        "equivalent to the intended behavior.",
+                    )
+
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                if node.func.id == "eval":
+                    add_finding(
+                        "PY005",
+                        node.lineno,
+                        "eval() can execute arbitrary expressions and "
+                        "may be unsafe with untrusted input.",
+                        "Avoid evaluating untrusted input. Use explicit "
+                        "parsing or ast.literal_eval() for Python literals.",
+                    )
+
+                elif node.func.id == "exec":
+                    add_finding(
+                        "PY006",
+                        node.lineno,
+                        "exec() dynamically executes Python code and "
+                        "may introduce security risks.",
+                        "Replace dynamic execution with explicit "
+                        "functions or controlled logic where possible.",
+                    )
+
+        elif isinstance(node, ast.Dict):
+            seen_keys = set()
+
+            for key in node.keys:
+                if not isinstance(key, ast.Constant):
+                    continue
+
+                if key.value in seen_keys:
+                    add_finding(
+                        "PY008",
+                        key.lineno,
+                        "A duplicate dictionary key overwrites "
+                        "an earlier value.",
+                        "Remove the duplicate key or give each "
+                        "entry a unique key.",
+                    )
+
+                seen_keys.add(key.value)
 
     return sorted(
         findings,

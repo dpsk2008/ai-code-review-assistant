@@ -1,3 +1,4 @@
+
 import unittest
 
 from review_assistant.rules import analyze_source
@@ -52,6 +53,90 @@ class AnalyzeSourceTests(unittest.TestCase):
             ["PY003"],
         )
         self.assertEqual(findings[0].line_number, 4)
+
+    def test_flags_none_equality_comparison(self):
+        source = "if value == None:\n    pass\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["PY004"],
+        )
+
+    def test_flags_none_inequality_comparison(self):
+        source = "if value != None:\n    pass\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["PY004"],
+        )
+
+    def test_ignores_none_identity_comparison(self):
+        source = "if value is None:\n    pass\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(findings, [])
+
+    def test_flags_eval_call(self):
+        source = "result = eval(expression)\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["PY005"],
+        )
+
+    def test_flags_exec_call(self):
+        source = "exec(expression)\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["PY006"],
+        )
+
+    def test_ignores_eval_on_unchanged_line(self):
+        source = "expression = '1 + 2'\nresult = eval(expression)\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(findings, [])
+
+    def test_flags_boolean_comparison(self):
+        source = "if active == True:\n    pass\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["PY007"],
+        )
+
+    def test_ignores_direct_boolean_condition(self):
+        source = "if active:\n    pass\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(findings, [])
+
+    def test_flags_duplicate_dictionary_key(self):
+        source = (
+            "data = {\n"
+            "    'name': 'Alice',\n"
+            "    'name': 'Bob',\n"
+            "}\n"
+        )
+        findings = analyze_source("example.py", source, {3})
+
+        self.assertEqual(
+            [finding.rule_id for finding in findings],
+            ["PY008"],
+        )
+        self.assertEqual(findings[0].line_number, 3)
+
+    def test_ignores_unique_dictionary_keys(self):
+        source = "data = {'name': 'Alice', 'age': 25}\n"
+        findings = analyze_source("example.py", source, {1})
+
+        self.assertEqual(findings, [])
 
 
 if __name__ == "__main__":

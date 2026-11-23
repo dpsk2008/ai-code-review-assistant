@@ -19,7 +19,12 @@ const MAX_FILE_SIZE = 1024 * 1024;
 const ruleTitles = {
     PY001: "Potential IndexError",
     PY002: "Mutable Default Argument",
-    PY003: "Bare Except Clause"
+    PY003: "Bare Except Clause",
+    PY004: "Incorrect None Comparison",
+    PY005: "Potentially Unsafe eval()",
+    PY006: "Potentially Unsafe exec()",
+    PY007: "Unnecessary Boolean Comparison",
+    PY008: "Duplicate Dictionary Key"
 };
 
 let activeLine = null;
