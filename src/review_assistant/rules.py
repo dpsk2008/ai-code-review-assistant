@@ -33,6 +33,33 @@ def _is_mutable_default(node: ast.expr) -> bool:
     )
 
 
+def _has_simple_guard(
+    node: ast.Subscript,
+    parents: dict[ast.AST, ast.AST],
+) -> bool:
+    """Check whether indexing is inside a matching if statement."""
+    if not isinstance(node.value, ast.Name):
+        return False
+
+    variable_name = node.value.id
+    current = node
+
+    while current in parents:
+        parent = parents[current]
+
+        if isinstance(parent, ast.If):
+            if (
+                current in parent.body
+                and isinstance(parent.test, ast.Name)
+                and parent.test.id == variable_name
+            ):
+                return True
+
+        current = parent
+
+    return False
+
+
 def analyze_source(
     file_path: str,
     source: str,
@@ -40,6 +67,12 @@ def analyze_source(
 ) -> list[Finding]:
     tree = ast.parse(source, filename=file_path)
     findings: list[Finding] = []
+
+    parents = {
+        child: parent
+        for parent in ast.walk(tree)
+        for child in ast.iter_child_nodes(parent)
+    }
 
     def add_finding(rule_id, line, message, recommendation):
         if line in changed_line_numbers:
@@ -60,13 +93,15 @@ def analyze_source(
                 isinstance(node.slice, ast.Constant)
                 and type(node.slice.value) is int
                 and node.slice.value == 0
+                and not _has_simple_guard(node, parents)
             ):
                 add_finding(
                     "PY001",
                     node.lineno,
-                    "Indexing at 0 can raise IndexError if the sequence is empty.",
-                    "Check that the sequence is non-empty before indexing, "
-                    "or use a safe lookup.",
+                    "Indexing at 0 can raise IndexError if the "
+                    "sequence is empty.",
+                    "Check that the sequence is non-empty before "
+                    "indexing, or use a safe lookup.",
                 )
 
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -132,10 +167,12 @@ def analyze_source(
                     add_finding(
                         "PY007",
                         node.lineno,
-                        "Explicit equality comparisons with boolean "
-                        "values may be unnecessary.",
-                        "Consider a direct boolean condition when "
-                        "equivalent to the intended behavior.",
+                        "Comparing a value directly with True or False "
+                        "may be unnecessary when the value is already boolean.",
+                        "If the value is guaranteed to be boolean, "
+                        "consider using the value directly or with 'not'. "
+                        "Otherwise, keep the comparison if its exact "
+                        "behavior is required.",
                     )
 
         elif isinstance(node, ast.Call):
@@ -165,6 +202,11 @@ def analyze_source(
 
             for key in node.keys:
                 if not isinstance(key, ast.Constant):
+                    continue
+
+                try:
+                    hash(key.value)
+                except TypeError:
                     continue
 
                 if key.value in seen_keys:
