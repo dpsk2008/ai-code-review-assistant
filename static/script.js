@@ -3,10 +3,17 @@ const codeInput = document.getElementById("code-input");
 const lineNumbers = document.getElementById("line-numbers");
 const highlightLayer = document.getElementById("highlight-layer");
 const highlightedCode = document.getElementById("highlighted-code");
+
 const reviewButton = document.getElementById("review-button");
+const aiReviewButton = document.getElementById("ai-review-button");
+
 const statusMessage = document.getElementById("status-message");
 const findingsList = document.getElementById("findings-list");
 const issueCount = document.getElementById("issue-count");
+
+const aiStatusMessage = document.getElementById("ai-status-message");
+const aiReviewOutput = document.getElementById("ai-review-output");
+const aiReviewText = document.getElementById("ai-review-text");
 
 const fileInput = document.getElementById("file-input");
 const uploadButton = document.getElementById("upload-button");
@@ -30,12 +37,19 @@ const ruleTitles = {
 let activeLine = null;
 let documentVersion = 0;
 
+/* Active Line Highlight */
+
 const lineHighlight = document.createElement("div");
 lineHighlight.className = "active-code-line";
 lineHighlight.hidden = true;
 lineHighlight.setAttribute("aria-hidden", "true");
 
-codeInput.parentElement.insertBefore(lineHighlight, highlightLayer);
+codeInput.parentElement.insertBefore(
+    lineHighlight,
+    highlightLayer
+);
+
+/* Editor Functions */
 
 function updateLineNumbers() {
     const totalLines = codeInput.value.split("\n").length;
@@ -93,9 +107,11 @@ function clearActiveLine() {
     activeLine = null;
     lineHighlight.hidden = true;
 
-    document.querySelectorAll(".finding.active").forEach((card) => {
-        card.classList.remove("active");
-    });
+    document.querySelectorAll(".finding.active").forEach(
+        (card) => {
+            card.classList.remove("active");
+        }
+    );
 }
 
 function resetReview(message) {
@@ -103,6 +119,13 @@ function resetReview(message) {
     findingsList.replaceChildren();
     issueCount.textContent = "";
     statusMessage.textContent = message;
+}
+
+function resetAIReview(message) {
+    aiReviewText.textContent = "";
+    aiReviewOutput.hidden = true;
+    aiStatusMessage.textContent = message;
+    aiStatusMessage.classList.remove("error");
 }
 
 function updateEditor() {
@@ -118,6 +141,10 @@ function handleCodeChange() {
         "Code changed. Run a review for updated results."
     );
 
+    resetAIReview(
+        "Code changed. Run Review with AI for updated feedback."
+    );
+
     updateEditor();
 }
 
@@ -125,6 +152,8 @@ function showFileMessage(message, isError = false) {
     fileMessage.textContent = message;
     fileMessage.classList.toggle("error", isError);
 }
+
+/* Go to Line */
 
 function goToLine(number, card) {
     const lines = codeInput.value.split("\n");
@@ -143,7 +172,10 @@ function goToLine(number, card) {
 
     const start = lines
         .slice(0, number - 1)
-        .reduce((length, line) => length + line.length + 1, 0);
+        .reduce(
+            (length, line) => length + line.length + 1,
+            0
+        );
 
     const styles = getComputedStyle(codeInput);
     const lineHeight = parseFloat(styles.lineHeight);
@@ -153,7 +185,8 @@ function goToLine(number, card) {
 
     codeInput.scrollTop = Math.max(
         0,
-        (number - 1) * lineHeight - codeInput.clientHeight / 2
+        (number - 1) * lineHeight -
+        codeInput.clientHeight / 2
     );
 
     codeInput.scrollLeft = 0;
@@ -161,7 +194,9 @@ function goToLine(number, card) {
     syncEditorScroll();
 
     codeInput.closest(".workspace").scrollIntoView({
-        behavior: "smooth",
+        behavior: window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+        ).matches ? "auto" : "smooth",
         block: "center"
     });
 }
@@ -183,17 +218,27 @@ fileInput.addEventListener("change", async () => {
     showFileMessage("");
 
     if (!file.name.toLowerCase().endsWith(".py")) {
-        showFileMessage("Please select a Python (.py) file.", true);
+        showFileMessage(
+            "Please select a Python (.py) file.",
+            true
+        );
         return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-        showFileMessage("File size must not exceed 1 MB.", true);
+        showFileMessage(
+            "File size must not exceed 1 MB.",
+            true
+        );
         return;
     }
 
-    if (codeInput.value.trim() &&
-        !window.confirm("Replace the current code with this file?")) {
+    if (
+        codeInput.value.trim() &&
+        !window.confirm(
+            "Replace the current code with this file?"
+        )
+    ) {
         return;
     }
 
@@ -217,9 +262,18 @@ fileInput.addEventListener("change", async () => {
         codeInput.scrollLeft = 0;
         codeInput.setSelectionRange(0, 0);
 
-        resetReview("File loaded. Click Review Code to begin.");
+        resetReview(
+            "File loaded. Click Review Code to begin."
+        );
 
-        showFileMessage("Python file loaded successfully.");
+        resetAIReview(
+            "File loaded. Click Review with AI to begin."
+        );
+
+        showFileMessage(
+            "Python file loaded successfully."
+        );
+
         updateEditor();
 
     } catch (error) {
@@ -232,9 +286,15 @@ fileInput.addEventListener("change", async () => {
     }
 });
 
+/* Clear Editor */
+
 clearButton.addEventListener("click", () => {
-    if (codeInput.value.trim() &&
-        !window.confirm("Clear all code from the editor?")) {
+    if (
+        codeInput.value.trim() &&
+        !window.confirm(
+            "Clear all code from the editor?"
+        )
+    ) {
         return;
     }
 
@@ -243,11 +303,19 @@ clearButton.addEventListener("click", () => {
     codeInput.value = "";
     fileInput.value = "";
     fileName.textContent = "Untitled.py";
+
     codeInput.scrollTop = 0;
     codeInput.scrollLeft = 0;
 
     showFileMessage("");
-    resetReview("Your review results will appear here.");
+
+    resetReview(
+        "Your review results will appear here."
+    );
+
+    resetAIReview(
+        "Click Review with AI to generate an additional code review."
+    );
 
     updateEditor();
     codeInput.focus();
@@ -269,12 +337,17 @@ codeInput.addEventListener("keydown", (event) => {
     const start = codeInput.selectionStart;
     const end = codeInput.selectionEnd;
 
-    codeInput.setRangeText("    ", start, end, "end");
+    codeInput.setRangeText(
+        "    ",
+        start,
+        end,
+        "end"
+    );
 
     handleCodeChange();
 });
 
-/* Review Findings */
+/* Static Analysis Finding Cards */
 
 function createFindingCard(finding) {
     const card = document.createElement("article");
@@ -304,11 +377,14 @@ function createFindingCard(finding) {
     const recommendation = document.createElement("div");
     recommendation.className = "recommendation";
 
-    const recommendationTitle = document.createElement("strong");
+    const recommendationTitle =
+        document.createElement("strong");
     recommendationTitle.textContent = "Recommendation";
 
-    const recommendationText = document.createElement("p");
-    recommendationText.textContent = finding.recommendation;
+    const recommendationText =
+        document.createElement("p");
+    recommendationText.textContent =
+        finding.recommendation;
 
     recommendation.append(
         recommendationTitle,
@@ -318,7 +394,8 @@ function createFindingCard(finding) {
     const lineButton = document.createElement("button");
     lineButton.type = "button";
     lineButton.className = "goto-line";
-    lineButton.textContent = `Go to line ${finding.line_number}`;
+    lineButton.textContent =
+        `Go to line ${finding.line_number}`;
 
     lineButton.addEventListener("click", () => {
         goToLine(finding.line_number, card);
@@ -335,7 +412,23 @@ function createFindingCard(finding) {
     return card;
 }
 
-/* Submit Review */
+/* Read API Responses */
+
+async function getAPIResponse(response) {
+    const result = await response.json();
+
+    if (!response.ok) {
+        throw new Error(
+            typeof result.detail === "string"
+                ? result.detail
+                : "Unable to complete the review."
+        );
+    }
+
+    return result;
+}
+
+/* Static Code Review */
 
 reviewButton.addEventListener("click", async () => {
     const code = codeInput.value;
@@ -352,7 +445,8 @@ reviewButton.addEventListener("click", async () => {
 
     reviewButton.disabled = true;
     reviewButton.textContent = "Reviewing...";
-    statusMessage.textContent = "Analyzing your code...";
+    statusMessage.textContent =
+        "Analyzing your code...";
 
     try {
         const response = await fetch("/review", {
@@ -363,18 +457,10 @@ reviewButton.addEventListener("click", async () => {
             body: JSON.stringify({ code })
         });
 
-        const result = await response.json();
+        const result = await getAPIResponse(response);
 
         if (version !== documentVersion) {
             return;
-        }
-
-        if (!response.ok) {
-            throw new Error(
-                typeof result.detail === "string"
-                    ? result.detail
-                    : "Unable to review the code."
-            );
         }
 
         const findings = result.findings;
@@ -391,17 +477,214 @@ reviewButton.addEventListener("click", async () => {
         statusMessage.textContent = "";
 
         for (const finding of findings) {
-            findingsList.appendChild(createFindingCard(finding));
+            findingsList.appendChild(
+                createFindingCard(finding)
+            );
         }
 
     } catch (error) {
         if (version === documentVersion) {
-            statusMessage.textContent = error.message;
+            statusMessage.textContent =
+                error instanceof Error
+                    ? error.message
+                    : "Unable to review the code.";
         }
+
     } finally {
         reviewButton.disabled = false;
         reviewButton.textContent = "Review Code";
     }
 });
+
+
+/* Format AI Review Results */
+
+function formatAIReview(review) {
+    const fragment = document.createDocumentFragment();
+    const lines = review.split("\n");
+
+    let codeBlock = null;
+    let codeLines = [];
+    let inCodeBlock = false;
+
+    function appendCodeBlock() {
+        if (codeLines.length === 0) {
+            return;
+        }
+
+        const pre = document.createElement("pre");
+        pre.className = "ai-code-block";
+
+        const code = document.createElement("code");
+        code.className = "language-python";
+        code.textContent = codeLines.join("\n");
+
+        if (window.Prism && Prism.languages.python) {
+            Prism.highlightElement(code);
+        }
+
+        pre.appendChild(code);
+        fragment.appendChild(pre);
+
+        codeLines = [];
+        codeBlock = null;
+    }
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith("```")) {
+            if (inCodeBlock) {
+                appendCodeBlock();
+                inCodeBlock = false;
+            } else {
+                inCodeBlock = true;
+                codeLines = [];
+            }
+
+            continue;
+        }
+
+        if (inCodeBlock) {
+            codeLines.push(line);
+            continue;
+        }
+
+        if (!trimmed) {
+            continue;
+        }
+
+        const sections = [
+            "ISSUE:",
+            "WHY IT MATTERS:",
+            "SUGGESTED FIX:",
+            "CORRECTED CODE:"
+        ];
+
+        const matchedSection = sections.find(
+            (section) => trimmed.startsWith(section)
+        );
+
+        if (matchedSection) {
+            const container = document.createElement("div");
+            container.className = "ai-review-section";
+
+            const heading = document.createElement("h4");
+            heading.textContent =
+                matchedSection.replace(":", "");
+
+            container.appendChild(heading);
+
+            const content = trimmed
+                .slice(matchedSection.length)
+                .trim();
+
+            if (content) {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = content;
+                container.appendChild(paragraph);
+            }
+
+            fragment.appendChild(container);
+        } else {
+            const paragraph = document.createElement("p");
+            paragraph.className = "ai-review-paragraph";
+            paragraph.textContent = line;
+
+            fragment.appendChild(paragraph);
+        }
+    }
+
+    if (inCodeBlock) {
+        appendCodeBlock();
+    }
+
+    return fragment;
+}
+
+/* AI Code Review */
+
+aiReviewButton.addEventListener("click", async () => {
+    const code = codeInput.value;
+    const version = documentVersion;
+
+    resetAIReview("");
+
+    if (!code.trim()) {
+        aiStatusMessage.textContent =
+            "Please enter some Python code first.";
+        return;
+    }
+
+    if (new Blob([code]).size > MAX_FILE_SIZE) {
+        aiStatusMessage.textContent =
+            "AI review is limited to 1 MB of Python code.";
+        return;
+    }
+
+    aiReviewButton.disabled = true;
+    aiReviewButton.textContent = "Reviewing with AI...";
+
+    aiStatusMessage.textContent =
+        "The local AI model is analyzing your code.";
+
+    try {
+        const response = await fetch("/review/ai", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ code })
+        });
+
+        const result = await getAPIResponse(response);
+
+        if (version !== documentVersion) {
+            return;
+        }
+
+        if (
+            typeof result.ai_review !== "string" ||
+            !result.ai_review.trim()
+        ) {
+            throw new Error(
+                "The AI returned an empty review. Please try again."
+            );
+        }
+
+       // Display structured AI feedback safely.
+aiReviewText.replaceChildren(
+    formatAIReview(result.ai_review)
+);
+aiReviewOutput.hidden = false;
+
+        aiStatusMessage.textContent = "";
+
+        aiReviewOutput.scrollIntoView({
+            behavior: window.matchMedia(
+                "(prefers-reduced-motion: reduce)"
+            ).matches ? "auto" : "smooth",
+            block: "start"
+        });
+
+    } catch (error) {
+        if (version === documentVersion) {
+            aiReviewOutput.hidden = true;
+
+            aiStatusMessage.textContent =
+                error instanceof Error
+                    ? error.message
+                    : "Unable to complete the AI review.";
+
+            aiStatusMessage.classList.add("error");
+        }
+
+    } finally {
+        aiReviewButton.disabled = false;
+        aiReviewButton.textContent = "Review with AI";
+    }
+});
+
+/* Initialize Editor */
 
 updateEditor();

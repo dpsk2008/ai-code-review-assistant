@@ -67,7 +67,7 @@ body {
     font-size: 16px;
 }
 
-/* Workspace */
+/* Main Panels */
 
 .workspace,
 .results {
@@ -271,6 +271,10 @@ body {
     pointer-events: none;
 }
 
+.active-code-line[hidden] {
+    display: none;
+}
+
 /* Python Syntax Highlighting */
 
 .token.keyword {
@@ -300,49 +304,70 @@ body {
     color: #374151;
 }
 
-/* Editor Actions */
+/* Review Buttons */
 
 .editor-actions {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
     padding: 16px 24px;
     border-top: 1px solid #e5e7eb;
 }
 
-#review-button {
+#review-button,
+#ai-review-button {
     padding: 11px 22px;
-    border: 0;
     border-radius: 6px;
-    background-color: #243b53;
-    color: #ffffff;
     font: inherit;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#review-button {
+    border: 1px solid #243b53;
+    background-color: #243b53;
+    color: #ffffff;
 }
 
 #review-button:hover {
     background-color: #334e68;
 }
 
-#review-button:focus-visible {
+#ai-review-button {
+    border: 1px solid #243b53;
+    background-color: #ffffff;
+    color: #243b53;
+}
+
+#ai-review-button:hover {
+    background-color: #f1f5f9;
+}
+
+#review-button:focus-visible,
+#ai-review-button:focus-visible {
     outline: 3px solid #94a3b8;
     outline-offset: 3px;
 }
 
-#review-button:disabled {
+#review-button:disabled,
+#ai-review-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
-/* Review Results */
+/* Static Analysis Results */
 
 #issue-count {
     color: #6b7280;
     font-size: 13px;
 }
 
-#status-message {
+#status-message,
+#ai-status-message {
     margin: 0;
     padding: 24px;
     color: #6b7280;
@@ -350,6 +375,7 @@ body {
 }
 
 #status-message:empty,
+#ai-status-message:empty,
 #findings-list:empty {
     display: none;
 }
@@ -428,6 +454,121 @@ body {
     margin-top: 14px;
 }
 
+/* AI Review Results */
+
+.ai-results {
+    margin-top: 24px;
+}
+
+#ai-review-output {
+    margin: 0 24px 24px;
+    padding: 22px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background-color: #fafafa;
+}
+
+#ai-review-output[hidden] {
+    display: none;
+}
+
+.ai-response-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ai-response-header h3 {
+    margin: 0;
+    color: #111827;
+    font-size: 16px;
+}
+
+.ai-label {
+    padding: 4px 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background-color: #f1f5f9;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#ai-review-text {
+    color: #1f2937;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    tab-size: 4;
+}
+
+.ai-disclaimer {
+    margin: 20px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+#ai-status-message.error {
+    color: #b91c1c;
+}
+
+/* Structured AI Review */
+
+.ai-review-section {
+    margin-top: 18px;
+}
+
+.ai-review-section:first-child {
+    margin-top: 0;
+}
+
+.ai-review-section h4 {
+    margin: 0 0 6px;
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.ai-review-section p,
+.ai-review-paragraph {
+    margin: 0 0 12px;
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.ai-review-paragraph {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* AI Generated Python Code Blocks */
+
+.ai-code-block {
+    margin: 12px 0 20px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background-color: #f3f4f6;
+    overflow-x: auto;
+}
+
+.ai-code-block code {
+    display: block;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre;
+    tab-size: 4;
+}
+
 /* Footer */
 
 .site-footer {
@@ -483,5 +624,37 @@ body {
 
     .finding {
         padding: 16px;
+    }
+
+    .editor-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #review-button,
+    #ai-review-button {
+        width: 100%;
+    }
+
+    #ai-review-output {
+        margin: 0 16px 16px;
+        padding: 16px;
+    }
+
+    .ai-code-block {
+        padding: 12px;
+    }
+
+    .ai-code-block code {
+        font-size: 12px;
+    }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+    #review-button,
+    #ai-review-button {
+        transition: none;
     }
 }

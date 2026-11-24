@@ -22,7 +22,10 @@
     <main class="container">
         <section class="intro">
             <h1>Review your code with confidence.</h1>
-            <p>Find potential bugs and get clear recommendations to improve your Python code.</p>
+            <p>
+                Find potential bugs, understand issues, and get practical
+                recommendations for improving your Python code.
+            </p>
         </section>
 
         <section class="workspace" aria-labelledby="editor-heading">
@@ -43,11 +46,15 @@
                         hidden
                     >
 
-                    <button id="upload-button" class="secondary-button" type="button">
+                    <button id="upload-button"
+                            class="secondary-button"
+                            type="button">
                         Upload File
                     </button>
 
-                    <button id="clear-button" class="secondary-button" type="button">
+                    <button id="clear-button"
+                            class="secondary-button"
+                            type="button">
                         Clear Editor
                     </button>
                 </div>
@@ -79,12 +86,19 @@
                 <button id="review-button" type="button">
                     Review Code
                 </button>
+
+                <button id="ai-review-button" type="button">
+                    Review with AI
+                </button>
             </div>
         </section>
 
         <section class="results" aria-labelledby="results-heading">
             <div class="section-header">
-                <h2 id="results-heading">Review Results</h2>
+                <div>
+                    <h2 id="results-heading">Static Analysis Results</h2>
+                    <p>Findings from our Python review rules.</p>
+                </div>
                 <span id="issue-count"></span>
             </div>
 
@@ -93,6 +107,35 @@
             </p>
 
             <div id="findings-list"></div>
+        </section>
+
+        <section class="results ai-results"
+                 aria-labelledby="ai-results-heading">
+            <div class="section-header">
+                <div>
+                    <h2 id="ai-results-heading">AI Code Review</h2>
+                    <p>Contextual feedback powered by a local AI model.</p>
+                </div>
+                <span class="language-label">Qwen2.5-Coder</span>
+            </div>
+
+            <p id="ai-status-message" role="status" aria-live="polite">
+                Click Review with AI to generate an additional code review.
+            </p>
+
+            <div id="ai-review-output" hidden>
+                <div class="ai-response-header">
+                    <h3>AI Analysis</h3>
+                    <span class="ai-label">AI Generated</span>
+                </div>
+
+                <div id="ai-review-text"></div>
+
+                <p class="ai-disclaimer">
+                    AI suggestions may be incorrect. Review proposed
+                    changes before using them in your project.
+                </p>
+            </div>
         </section>
     </main>
 
