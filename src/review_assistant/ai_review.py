@@ -5,6 +5,10 @@ OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 MODEL_NAME = "qwen2.5-coder:3b"
 
 
+class AIReviewError(Exception):
+    """Raised when Ollama returns an invalid AI review response."""
+
+
 def review_with_ai(code: str) -> str:
     """Review Python code using a locally running Ollama model."""
 
@@ -54,4 +58,28 @@ def review_with_ai(code: str) -> str:
 
     response.raise_for_status()
 
-    return response.json()["response"]
+    try:
+        result = response.json()
+    except ValueError as error:
+        raise AIReviewError(
+            "Ollama returned an invalid JSON response."
+        ) from error
+
+    if not isinstance(result, dict):
+        raise AIReviewError(
+            "Ollama returned an unexpected response format."
+        )
+
+    ai_response = result.get("response")
+
+    if not isinstance(ai_response, str):
+        raise AIReviewError(
+            "Ollama response is missing valid review text."
+        )
+
+    if not ai_response.strip():
+        raise AIReviewError(
+            "Ollama returned an empty review."
+        )
+
+    return ai_response

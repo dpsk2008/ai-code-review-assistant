@@ -21,7 +21,10 @@ class ReviewAPITests(unittest.TestCase):
     def test_detects_zero_index(self):
         code = "def get_first(items):\n    return items[0]"
 
-        response = self.client.post("/review", json={"code": code})
+        response = self.client.post(
+            "/review",
+            json={"code": code},
+        )
 
         self.assertEqual(response.status_code, 200)
 
@@ -32,9 +35,15 @@ class ReviewAPITests(unittest.TestCase):
         self.assertEqual(findings[0]["line_number"], 2)
 
     def test_detects_mutable_default(self):
-        code = "def add_item(item, items=[]):\n    items.append(item)"
+        code = (
+            "def add_item(item, items=[]):\n"
+            "    items.append(item)"
+        )
 
-        response = self.client.post("/review", json={"code": code})
+        response = self.client.post(
+            "/review",
+            json={"code": code},
+        )
 
         self.assertEqual(response.status_code, 200)
 
@@ -44,9 +53,17 @@ class ReviewAPITests(unittest.TestCase):
         self.assertEqual(findings[0]["rule_id"], "PY002")
 
     def test_detects_bare_except(self):
-        code = "try:\n    print('Hello')\nexcept:\n    pass"
+        code = (
+            "try:\n"
+            "    print('Hello')\n"
+            "except:\n"
+            "    pass"
+        )
 
-        response = self.client.post("/review", json={"code": code})
+        response = self.client.post(
+            "/review",
+            json={"code": code},
+        )
 
         self.assertEqual(response.status_code, 200)
 
@@ -58,7 +75,10 @@ class ReviewAPITests(unittest.TestCase):
     def test_code_without_findings(self):
         code = "print('Hello World')"
 
-        response = self.client.post("/review", json={"code": code})
+        response = self.client.post(
+            "/review",
+            json={"code": code},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["findings"], [])
@@ -66,15 +86,64 @@ class ReviewAPITests(unittest.TestCase):
     def test_invalid_python_syntax(self):
         code = "def broken_function("
 
-        response = self.client.post("/review", json={"code": code})
+        response = self.client.post(
+            "/review",
+            json={"code": code},
+        )
 
         self.assertEqual(response.status_code, 422)
-        self.assertIn("Invalid Python syntax", response.json()["detail"])
+        self.assertIn(
+            "Invalid Python syntax",
+            response.json()["detail"],
+        )
 
     def test_missing_code(self):
-        response = self.client.post("/review", json={})
+        response = self.client.post(
+            "/review",
+            json={},
+        )
 
         self.assertEqual(response.status_code, 422)
+
+    # Security and Input Validation Tests
+
+    def test_rejects_empty_code(self):
+        response = self.client.post(
+            "/review",
+            json={"code": "   "},
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn(
+            "Please enter Python code",
+            response.json()["detail"],
+        )
+
+    def test_rejects_oversized_code(self):
+        oversized_code = "x" * (64 * 1024 + 1)
+
+        response = self.client.post(
+            "/review",
+            json={"code": oversized_code},
+        )
+
+        self.assertEqual(response.status_code, 413)
+        self.assertIn(
+            "64 KB",
+            response.json()["detail"],
+        )
+
+    def test_accepts_code_within_limit(self):
+        response = self.client.post(
+            "/review",
+            json={"code": "print('hello')"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["findings"],
+            [],
+        )
 
 
 if __name__ == "__main__":
