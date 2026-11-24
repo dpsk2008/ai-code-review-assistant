@@ -13,6 +13,10 @@ BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR / "src"))
 
 from review_assistant.ai_review import AIReviewError, review_with_ai
+from review_assistant.github_review import (
+    GitHubReviewError,
+    review_repository,
+)
 from review_assistant.rules import analyze_source
 
 
@@ -23,8 +27,8 @@ MAX_CODE_BYTES = 64 * 1024
 app = FastAPI(
     title="AI Code Review Assistant",
     description=(
-        "Review Python code using static analysis "
-        "and a locally running AI model."
+        "Review Python code using static analysis, "
+        "a locally running AI model, and public GitHub repositories."
     ),
     version="1.0.0",
 )
@@ -38,6 +42,10 @@ app.mount(
 
 class ReviewRequest(BaseModel):
     code: str
+
+
+class GitHubReviewRequest(BaseModel):
+    repository_url: str
 
 
 def validate_code(code: str) -> None:
@@ -168,4 +176,22 @@ def review_code_with_ai(request: ReviewRequest):
                 "The local AI model returned an invalid response. "
                 "Please try again."
             ),
+        ) from error
+
+
+@app.post("/review/github")
+def review_github_repository(request: GitHubReviewRequest):
+    """Analyze Python files from a public GitHub repository."""
+
+    try:
+        result = review_repository(
+            request.repository_url
+        )
+
+        return result
+
+    except GitHubReviewError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=str(error),
         ) from error

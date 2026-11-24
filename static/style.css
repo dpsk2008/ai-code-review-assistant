@@ -658,3 +658,200 @@ body {
         transition: none;
     }
 }
+
+
+/* =========================================
+   GitHub Repository Review
+   ========================================= */
+
+.github-review-form {
+    padding: 22px 24px;
+}
+
+.github-review-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.github-form-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+#github-repository-url {
+    min-width: 0;
+    flex: 1;
+    padding: 11px 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #111827;
+    background: #ffffff;
+    font: inherit;
+    font-size: 14px;
+}
+
+#github-repository-url:focus-visible {
+    outline: 3px solid #94a3b8;
+    outline-offset: 2px;
+}
+
+#github-review-button {
+    padding: 11px 18px;
+    border: 1px solid #243b53;
+    border-radius: 6px;
+    background: #243b53;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#github-review-button:hover {
+    background: #334e68;
+}
+
+#github-review-button:focus-visible {
+    outline: 3px solid #94a3b8;
+    outline-offset: 2px;
+}
+
+#github-review-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.github-hint {
+    margin: 10px 0 0;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+/* GitHub Results */
+
+#github-issue-count {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+#github-status-message {
+    padding: 20px 24px;
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+#github-status-message:empty {
+    display: none;
+}
+
+#github-status-message.error {
+    color: #b91c1c;
+}
+
+#github-review-summary {
+    margin: 20px 24px 0;
+    padding: 14px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fafafa;
+    color: #374151;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+#github-review-summary[hidden],
+#github-skipped-files[hidden] {
+    display: none;
+}
+
+#github-review-summary strong {
+    color: #111827;
+}
+
+/* Findings Grouped by File */
+
+#github-findings-list {
+    padding: 0 24px 24px;
+}
+
+#github-findings-list:empty {
+    display: none;
+}
+
+.github-file-group {
+    margin-top: 20px;
+}
+
+.github-file-group h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    color: #243b53;
+    overflow-wrap: anywhere;
+}
+
+.github-file-group .finding {
+    margin-top: 10px;
+}
+
+/* Skipped Files */
+
+#github-skipped-files {
+    margin: 0 24px 24px;
+    padding: 14px 16px;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+}
+
+#github-skipped-files summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+#github-skipped-files ul {
+    padding-left: 22px;
+    overflow-wrap: anywhere;
+}
+
+/* Mobile Layout */
+
+@media (max-width: 600px) {
+    .github-review-form {
+        padding: 16px;
+    }
+
+    .github-form-row {
+        flex-direction: column;
+    }
+
+    #github-review-button {
+        width: 100%;
+    }
+
+    #github-review-summary {
+        margin: 16px 16px 0;
+    }
+
+    #github-findings-list {
+        padding: 0 16px 16px;
+    }
+
+    #github-skipped-files {
+        margin: 0 16px 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #github-review-button {
+        transition: none;
+    }
+}
+
