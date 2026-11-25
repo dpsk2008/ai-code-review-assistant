@@ -321,31 +321,62 @@ clearButton.addEventListener("click", () => {
     codeInput.focus();
 });
 
+
 /* Editor Events */
 
 codeInput.addEventListener("input", handleCodeChange);
 codeInput.addEventListener("scroll", syncEditorScroll);
 window.addEventListener("resize", syncEditorScroll);
 
+// Allow users to leave the editor using Escape, then Tab.
+let escapeEditor = false;
+
 codeInput.addEventListener("keydown", (event) => {
-    if (event.key !== "Tab" || event.shiftKey) {
+
+    // Escape releases keyboard focus from the editor.
+    if (event.key === "Escape") {
+        event.preventDefault();
+        escapeEditor = true;
+        codeInput.blur();
         return;
     }
 
-    event.preventDefault();
+    // Shift + Tab moves to the previous control.
+    if (event.key === "Tab" && event.shiftKey) {
+        escapeEditor = false;
+        return;
+    }
 
-    const start = codeInput.selectionStart;
-    const end = codeInput.selectionEnd;
+    // Tab normally inserts four spaces in Python code.
+    if (event.key === "Tab") {
 
-    codeInput.setRangeText(
-        "    ",
-        start,
-        end,
-        "end"
-    );
+        // After Escape, allow normal keyboard navigation.
+        if (escapeEditor) {
+            escapeEditor = false;
+            return;
+        }
 
-    handleCodeChange();
+        event.preventDefault();
+
+        const start = codeInput.selectionStart;
+        const end = codeInput.selectionEnd;
+
+        codeInput.setRangeText(
+            "    ",
+            start,
+            end,
+            "end"
+        );
+
+        handleCodeChange();
+    }
 });
+
+// Reset the editor's navigation state when focused again.
+codeInput.addEventListener("focus", () => {
+    escapeEditor = false;
+});
+
 
 /* Static Analysis Finding Cards */
 
