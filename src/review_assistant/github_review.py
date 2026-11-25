@@ -110,6 +110,37 @@ def github_get(client: httpx.Client, path: str, params=None):
         ) from error
 
 
+def file_priority(item: tuple[str, str]) -> tuple[int, str]:
+    """
+    Prioritize application files before sample and test files.
+
+    Priority:
+        0 - Application code
+        1 - Samples and examples
+        2 - Tests
+    """
+
+    path = item[0].lower()
+    parts = path.split("/")
+
+    if any(
+        part in {"tests", "test"}
+        for part in parts
+    ):
+        priority = 2
+
+    elif any(
+        part in {"samples", "examples"}
+        for part in parts
+    ):
+        priority = 1
+
+    else:
+        priority = 0
+
+    return priority, path
+
+
 def review_repository(repository_url: str) -> dict:
     """Run static analysis on Python files in a public repository."""
 
@@ -130,7 +161,10 @@ def review_repository(repository_url: str) -> dict:
         },
     ) as client:
 
-        repository = github_get(client, api_root)
+        repository = github_get(
+            client,
+            api_root,
+        )
 
         if not isinstance(repository, dict):
             raise GitHubReviewError(
@@ -144,12 +178,18 @@ def review_repository(repository_url: str) -> dict:
 
         default_branch = repository.get("default_branch")
 
-        if not isinstance(default_branch, str) or not default_branch:
+        if (
+            not isinstance(default_branch, str)
+            or not default_branch
+        ):
             raise GitHubReviewError(
                 "The repository has no valid default branch."
             )
 
-        encoded_branch = quote(default_branch, safe="")
+        encoded_branch = quote(
+            default_branch,
+            safe="",
+        )
 
         tree_data = github_get(
             client,
@@ -199,12 +239,15 @@ def review_repository(repository_url: str) -> dict:
 
             python_files.append((path, sha))
 
-        python_files.sort()
+        # Prioritize application code before samples and tests.
+        python_files.sort(key=file_priority)
 
         selected_files = python_files[:MAX_FILES]
 
+        # Record files excluded because of the scan limit.
         skipped_files.extend(
-            path for path, _ in python_files[MAX_FILES:]
+            path
+            for path, _ in python_files[MAX_FILES:]
         )
 
         for path, sha in selected_files:
@@ -239,7 +282,10 @@ def review_repository(repository_url: str) -> dict:
 
             try:
                 changed_lines = set(
-                    range(1, len(source.splitlines()) + 1)
+                    range(
+                        1,
+                        len(source.splitlines()) + 1,
+                    )
                 )
 
                 file_findings = analyze_source(

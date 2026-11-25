@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from review_assistant.github_review import (
     GitHubReviewError,
+    file_priority,
     parse_repository_url,
     review_repository,
 )
@@ -226,6 +227,28 @@ class GitHubURLTests(unittest.TestCase):
             )
 
         mock_get.assert_called_once()
+
+    # File Prioritization Test
+
+    def test_application_files_are_prioritized(self):
+        files = [
+            ("tests/test_api.py", "sha1"),
+            ("samples/before.py", "sha2"),
+            ("src/review_assistant/rules.py", "sha3"),
+            ("api.py", "sha4"),
+        ]
+
+        ordered = sorted(files, key=file_priority)
+
+        self.assertEqual(
+            [path for path, _ in ordered],
+            [
+                "api.py",
+                "src/review_assistant/rules.py",
+                "samples/before.py",
+                "tests/test_api.py",
+            ],
+        )
 
 
 if __name__ == "__main__":

@@ -794,6 +794,7 @@ function createGitHubFindingCard(finding) {
 
 /* Display GitHub Repository Results */
 
+
 function renderGitHubResults(result) {
     const findings = Array.isArray(result.findings)
         ? result.findings
@@ -817,11 +818,22 @@ function renderGitHubResults(result) {
     const nameText = document.createElement("strong");
     nameText.textContent = name;
 
+    const isPartialScan = skipped.length > 0;
+    const scanStatus = isPartialScan
+        ? "Partial scan"
+        : "Complete scan";
+
     const counts = document.createElement("span");
     counts.textContent =
-        ` · ${scanned.length} Python file${scanned.length === 1 ? "" : "s"} scanned`;
+        ` · ${scanStatus}` +
+        ` · ${scanned.length} Python file${scanned.length === 1 ? "" : "s"} scanned` +
+        ` · ${skipped.length} skipped`;
 
-    githubReviewSummary.replaceChildren(nameText, counts);
+    githubReviewSummary.replaceChildren(
+        nameText,
+        counts
+    );
+
     githubReviewSummary.hidden = false;
 
     /* Group findings by filename */
@@ -833,9 +845,10 @@ function renderGitHubResults(result) {
             continue;
         }
 
-        const path = typeof finding.file_path === "string"
-            ? finding.file_path
-            : "Unknown file";
+        const path =
+            typeof finding.file_path === "string"
+                ? finding.file_path
+                : "Unknown file";
 
         if (!byFile.has(path)) {
             byFile.set(path, []);
@@ -873,6 +886,12 @@ function renderGitHubResults(result) {
         summary.textContent =
             `${skipped.length} file${skipped.length === 1 ? "" : "s"} skipped`;
 
+        const explanation = document.createElement("p");
+        explanation.textContent =
+            "Files may be skipped because of the 10-file scan limit, " +
+            "the 64 KB per-file limit, unsupported content, " +
+            "or Python parsing errors.";
+
         const list = document.createElement("ul");
 
         for (const path of skipped) {
@@ -881,15 +900,33 @@ function renderGitHubResults(result) {
             list.appendChild(item);
         }
 
-        details.append(summary, list);
+        details.append(
+            summary,
+            explanation,
+            list
+        );
 
         githubSkippedFiles.replaceChildren(details);
         githubSkippedFiles.hidden = false;
     }
 
-    githubStatusMessage.textContent = findings.length
-        ? "Scan complete. Review the potential findings below."
-        : "Scan complete. No issues detected in the scanned Python files.";
+    /* Display accurate scan status */
+
+    if (isPartialScan) {
+        githubStatusMessage.textContent = findings.length
+            ? "Partial scan: some Python files were skipped or not analyzed. " +
+              "Findings below apply only to scanned files. " +
+              "This is not a full repository review."
+            : "Partial scan: no issues were detected in the scanned files, " +
+              "but some Python files were skipped. " +
+              "This is not a full repository review.";
+    } else {
+        githubStatusMessage.textContent = findings.length
+            ? "Scan complete for the repository's Python files. " +
+              "Review the potential findings below."
+            : "Scan complete for the repository's Python files. " +
+              "No issues detected by the current review rules.";
+    }
 }
 
 
