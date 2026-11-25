@@ -1,16 +1,16 @@
 # AI Code Review Assistant
 
-A Python-based code review application that combines static code analysis with locally hosted AI to detect potential bugs, explain programming issues, and recommend practical improvements.
+A Python-based code review application that combines **AST-based static analysis**, **locally hosted AI**, and **GitHub repository scanning** to identify potential bugs, explain programming issues, and recommend practical improvements.
 
-Built with **Python, FastAPI, JavaScript, HTML, CSS, and Ollama**, the application provides an interactive website for reviewing Python code.
+Built with Python, FastAPI, JavaScript, HTML, CSS, and Ollama, the application provides an interactive interface for reviewing Python code without executing the submitted code.
 
 ## Features
 
 ### 1. Python Static Analysis
 
-Uses Python's Abstract Syntax Tree (AST) to identify common programming issues without executing submitted code.
+Uses Python's Abstract Syntax Tree (AST) to detect common programming issues.
 
-The analyzer currently supports eight review rules:
+The analyzer supports eight review rules:
 
 | Rule | Description |
 |---|---|
@@ -23,43 +23,81 @@ The analyzer currently supports eight review rules:
 | PY007 | Unnecessary boolean comparisons |
 | PY008 | Duplicate dictionary keys |
 
+Each finding includes a rule identifier, severity, line number, explanation, and recommended improvement.
+
 ### 2. AI-Powered Code Review
 
-Integrates **Ollama and Qwen2.5-Coder 3B** to provide contextual feedback on Python code.
+Integrates **Ollama** with **Qwen2.5-Coder 3B** to generate contextual feedback.
 
-AI reviews include:
+AI reviews can include:
 
-- Identification of potential programming issues
-- Explanations of why problems matter
-- Recommendations for resolving bugs
+- Potential programming issues
+- Explanations of why issues matter
+- Practical recommendations
 - Suggested corrected Python code
 
-AI-generated recommendations are presented separately from deterministic static-analysis results.
+AI feedback is displayed separately from deterministic static-analysis findings.
 
-### 3. Interactive Web Interface
+The model runs locally through Ollama. It is a pretrained model, not a custom-trained machine learning model.
 
-The application provides a responsive code-review interface featuring:
+### 3. GitHub Repository Review
+
+Supports read-only static analysis of public GitHub repositories through the GitHub REST API.
+
+Features include:
+
+- GitHub repository URL validation
+- Public repository scanning
+- Prioritization of application code over examples and tests
+- Analysis of up to 10 eligible Python files
+- A 64 KB per-file size limit
+- Findings grouped by filename
+- Reporting of skipped files
+- Complete or partial scan status
+
+Repository code is analyzed without being executed.
+
+The current implementation reviews repository files, not GitHub pull-request changes.
+
+### 4. Interactive Web Interface
+
+The responsive website provides:
 
 - Python code editor
-- Syntax highlighting and line numbers
+- Syntax highlighting using Prism.js
+- Line numbers and issue navigation
 - Python file uploads
-- Navigation to flagged lines
-- Static analysis findings with explanations
-- AI-generated reviews with formatted code examples
-- Clear error and status messages
+- Static-analysis results
+- Formatted AI-generated feedback
+- GitHub repository review interface
+- Loading, error, and status messages
+- Keyboard navigation and editor indentation support
 
-### 4. Automated Testing
+The website has been checked at a 400-pixel mobile viewport.
 
-Uses Python's `unittest` framework to test:
+### 5. API Validation and Error Handling
 
-- Static analysis rules
-- Git diff parsing
-- FastAPI endpoints
-- AI endpoint behavior using mocked responses
+The FastAPI backend includes:
 
-The project currently includes **39 automated tests**.
+- Empty-input validation
+- 64 KB submitted-code size limit
+- Invalid Python syntax handling
+- AI connection and timeout error handling
+- AI response validation
+- GitHub URL and repository validation
+- GitHub API error handling
 
-GitHub Actions runs the test suite automatically as part of the continuous integration workflow.
+These protections support local development but do not constitute a complete production security audit.
+
+### 6. Automated Testing and Continuous Integration
+
+The project uses Python's `unittest` framework.
+
+Tests cover static-analysis rules, diff parsing, FastAPI endpoints, AI response handling with mocks, GitHub URL validation, repository scanning, and error handling.
+
+**Latest local verification: 71 automated tests passing.**
+
+GitHub Actions runs automated tests as part of the continuous integration workflow.
 
 ## Technology Stack
 
@@ -67,14 +105,15 @@ GitHub Actions runs the test suite automatically as part of the continuous integ
 |---|---|
 | Python | Core analysis engine |
 | Python AST | Static code analysis |
-| FastAPI | REST API and backend |
-| HTML | Website structure |
-| CSS | Responsive interface styling |
-| JavaScript | Interactive frontend |
-| Prism.js | Python syntax highlighting |
+| FastAPI | Backend and REST API |
+| HTML and CSS | Responsive user interface |
+| JavaScript | Frontend interactions |
+| Prism.js | Syntax highlighting |
 | Ollama | Local AI inference |
-| Qwen2.5-Coder 3B | AI-powered code review |
-| unittest | Automated testing |
+| Qwen2.5-Coder 3B | AI-generated code feedback |
+| HTTPX | HTTP requests |
+| unittest | Automated tests |
+| GitHub REST API | Repository access |
 | GitHub Actions | Continuous integration |
 
 ## Project Structure
@@ -85,11 +124,14 @@ ai-code-review-assistant/
 │   └── workflows/
 │       └── tests.yml
 ├── samples/
+│   ├── before.py
+│   └── after.py
 ├── src/
 │   └── review_assistant/
 │       ├── __init__.py
 │       ├── ai_review.py
 │       ├── diff_parser.py
+│       ├── github_review.py
 │       └── rules.py
 ├── static/
 │   ├── index.html
@@ -99,6 +141,9 @@ ai-code-review-assistant/
 │   ├── test_ai_review.py
 │   ├── test_api.py
 │   ├── test_diff_parser.py
+│   ├── test_github_api.py
+│   ├── test_github_review.py
+│   ├── test_ollama_client.py
 │   └── test_rules.py
 ├── .gitignore
 ├── api.py
@@ -111,10 +156,10 @@ ai-code-review-assistant/
 
 ### Prerequisites
 
-- Python 3.12 or a compatible Python 3 version
+- Python 3.12
 - Git
 - Ollama
-- Qwen2.5-Coder 3B model
+- Qwen2.5-Coder 3B for AI reviews
 
 ### 1. Clone the Repository
 
@@ -125,15 +170,18 @@ cd ai-code-review-assistant
 
 ### 2. Create a Virtual Environment
 
+macOS/Linux:
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-On Windows:
+Windows PowerShell:
 
 ```powershell
-.venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 ```
 
 ### 3. Install Dependencies
@@ -142,11 +190,9 @@ On Windows:
 python -m pip install -r requirements.txt
 ```
 
-### 4. Set Up Ollama
+### 4. Configure Ollama
 
-Install Ollama from:
-
-https://ollama.com/download
+Install Ollama from https://ollama.com/download.
 
 Download the model:
 
@@ -154,7 +200,7 @@ Download the model:
 ollama pull qwen2.5-coder:3b
 ```
 
-Make sure the Ollama service is running before requesting AI reviews.
+Ensure Ollama is running before requesting AI-powered reviews.
 
 ### 5. Start the Application
 
@@ -162,11 +208,11 @@ Make sure the Ollama service is running before requesting AI reviews.
 python -m uvicorn api:app --reload
 ```
 
-Open the application:
+Open the website:
 
 http://127.0.0.1:8000
 
-API documentation:
+Interactive API documentation:
 
 http://127.0.0.1:8000/docs
 
@@ -174,9 +220,10 @@ http://127.0.0.1:8000/docs
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/` | Serves the application website |
-| POST | `/review` | Performs Python AST analysis |
-| POST | `/review/ai` | Generates an AI-powered code review |
+| GET | `/` | Serve the website |
+| POST | `/review` | Analyze submitted Python code |
+| POST | `/review/ai` | Generate an AI-powered code review |
+| POST | `/review/github` | Analyze a public GitHub repository |
 
 ### Example: Static Analysis
 
@@ -188,63 +235,109 @@ Request:
 }
 ```
 
-The static analyzer identifies a potential `IndexError` when the input sequence is empty.
+Submit to:
+
+`POST /review`
+
+The analyzer can identify a potential `IndexError` when the sequence is empty.
+
+### Example: GitHub Repository Review
+
+Request:
+
+```json
+{
+  "repository_url": "https://github.com/dpsk2008/ai-code-review-assistant"
+}
+```
+
+Submit to:
+
+`POST /review/github`
+
+The response includes the repository name, scanned files, findings, file counts, and skipped files.
 
 ### Example: AI Review
 
-The same request can be submitted to `/review/ai`.
+Submit Python code to:
 
-The AI responds with an explanation of the issue and may suggest a safer implementation.
+`POST /review/ai`
 
-AI-generated responses can vary and should be reviewed before applying changes.
+The application sends the submitted code to the locally running Ollama model and returns AI-generated feedback.
+
+AI suggestions can be inaccurate and should be independently reviewed.
 
 ## Running Tests
 
-Run the full automated test suite:
+Run the complete test suite:
 
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The latest locally verified test suite completed successfully with 39 passing tests.
+Latest locally verified result:
+
+```text
+Ran 71 tests
+
+OK
+```
+
+Check JavaScript syntax:
+
+```bash
+node --check static/script.js
+```
 
 ## How It Works
 
-1. The user enters Python code or uploads a `.py` file.
-2. The frontend submits the code to the FastAPI backend.
-3. The static analyzer parses the Python source using AST.
-4. Supported review rules identify potential issues.
-5. Findings are returned with line numbers and recommendations.
-6. Optionally, the user requests an AI-powered review.
-7. Ollama processes the code using Qwen2.5-Coder.
-8. The website displays AI feedback separately from static-analysis findings.
+1. The user enters Python code, uploads a Python file, or supplies a public GitHub repository URL.
+2. The FastAPI backend validates the request.
+3. The AST analyzer parses Python code without executing it.
+4. Static-analysis rules identify potential problems.
+5. Findings are returned with explanations and line numbers.
+6. The user can optionally request an AI-powered code review.
+7. Ollama generates contextual feedback using Qwen2.5-Coder 3B.
+8. The frontend displays the results.
 
-Submitted code is analyzed without being executed by the application's review engine.
+For repository reviews, the application retrieves eligible Python files from GitHub and performs static analysis.
 
 ## Current Limitations
 
-- Static analysis currently supports Python only.
-- The rule-based analyzer detects a defined set of patterns rather than every possible bug.
-- AI review requires a locally running Ollama service.
-- AI-generated recommendations may be inaccurate.
-- The application is currently intended for local development and testing, not public production deployment.
+- Static analysis supports Python only.
+- Eight AST rules are currently implemented.
+- Static-analysis findings are potential issues, not proof of bugs.
+- AI review requires Ollama to be running locally.
+- AI-generated recommendations may be incorrect.
+- Repository scans are limited to 10 eligible Python files.
+- GitHub scanning currently supports accessible public repositories.
+- Large or unsupported files may be skipped.
+- Pull-request-specific review is not yet implemented.
+- The application is primarily intended for local development and demonstration.
+- Production authentication, deployment hardening, and comprehensive security auditing are not yet complete.
 
 ## Future Improvements
 
-- GitHub repository and pull-request review integration
-- Additional Python analysis rules
-- Improved AI response quality and validation
-- Expanded automated testing
-- Performance, security, and accessibility improvements
+Potential future improvements include:
+
+- Additional static-analysis rules
+- More comprehensive regression testing
+- Pull-request and changed-line review integration
+- Improved AI response validation
+- Improved analysis accuracy and reduced false positives
+- More detailed code-review reporting
 - Production deployment support
+- Evaluation of a separately trained machine learning component
+
+A custom ML component remains an optional future enhancement, not a currently implemented feature.
 
 ## Project Status
 
-**Active Development**
+**Working prototype — Final Quality Review**
 
-The core static analyzer, web interface, local AI integration, and automated test suite are functional.
+Implemented functionality includes the Python AST analyzer, local AI integration, interactive website, public GitHub repository scanning, and automated testing.
 
-Additional repository integration, security improvements, and deployment preparation are planned.
+The project is undergoing final documentation, accessibility, and security review.
 
 ## Author
 
@@ -252,4 +345,4 @@ Additional repository integration, security improvements, and deployment prepara
 
 Computer Science Student
 
-Developed as a practical software engineering project exploring static analysis, backend APIs, AI integration, frontend development, automated testing, and continuous integration.
+Developed as a practical software engineering project exploring static analysis, backend API development, AI integration, frontend engineering, testing, and continuous integration.
